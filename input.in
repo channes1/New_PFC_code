@@ -1,0 +1,28 @@
+# PFC input file
+
+# seed for random number generator
+S	24354545
+
+# output
+#	T_print	T_write	(intervals for printing output and writing out state)
+O	100	  1000
+
+# arrays
+#	W 	  H	Z (width, height and Z)
+A	512	512 512
+
+# polycrystalline initialization
+#	init	dx	dy	dz    l0	  no	  A	   R
+I	1	1.0	1.0	1.0   1.0	0.25	-0.1	10.0
+#	... x- and y-discretization, lattice constant [in dimensionless units, ~4pi/sqrt(3)],
+#	average density, amplitude of density oscillations,
+#	radius (in lattice constants) of grains
+
+# model parameters
+#	Bl	Bs	v	Me
+M	0.005	0.005	0.1	1
+
+# relaxation
+#	T	dx	dy	dz	dt	T_optimize
+R	10000	1.0	1.0	1.0	1.0	100
+#	number of iterations, ..., time step, interval for calculation box optimizations
