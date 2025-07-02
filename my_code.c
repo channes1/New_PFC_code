@@ -32,7 +32,7 @@ struct Arrays {
 
 	double *A;	// operator for linear part, e^{-k^2 \hat{\mathcal{L}} \Delta t}
 	double *B;	// operator for nonlinear part ...
-	double *p;	// array for \psi_C
+	double *p;	// array for \psi
 	double *q;	// another array
 	
 	fftw_plan p_P;	// FFTW plan for F(p)
