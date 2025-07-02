@@ -145,14 +145,10 @@ void configure_model(struct Model *model, FILE *input) {
 
 // configures relaxation
 void configure_relaxation(struct Relaxation *relaxation, FILE *input) {
-	// read from input file
-	if(fscanf(input, " %d %lf %lf %lf %lf %d", &relaxation->T, 
-&relaxation->dx, &relaxation->dy, &relaxation->dz, &relaxation->dt, 
-&relaxation->T_optimize) != 6) {
-		printf("Invalid input for relaxation settings!\n");
-		exit(1);
-	}
+	fscanf(input, " %d %lf %lf %lf %lf %d", &relaxation->T, &relaxation->dx, &relaxation->dy, &relaxation->dz, &relaxation->dt, &relaxation->T_optimize);	// read from input file
 }
+
+
 
 // returns the one mode approximation for 3D
 double OMA(double x, double y, double z, double A, double x0, double y0, double z0) {
@@ -549,7 +545,6 @@ void step(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxat
 
 	fftw_execute(arrays->Q_q);  // Q -> real q
 }
-
 
 // optimizes calculation box size for system
 // samples slightly different box sizes by varying dx, dy and dz and interpolates optimum quadratically
