@@ -131,12 +131,7 @@ void configure_arrays(struct Arrays *arrays, FILE *input) {
 
 // configures output
 void configure_output(struct Output *output, FILE *input) {
-	// read intervals for printing and saving from input file
-	if(fscanf(input, " %d %d", &output->T_print, &output->T_write) != 
-2) {
-		printf("Invalid input for output configuration!\n");
-		exit(1);
-	}
+	fscanf(input, " %d %d", &output->T_print, &output->T_write);	// read intervals for printing and saving from input file
 }
 
 // configures model
