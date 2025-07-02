@@ -32,7 +32,7 @@ struct Arrays {
 
 	double *A;	// operator for linear part, e^{-k^2 \hat{\mathcal{L}} \Delta t}
 	double *B;	// operator for nonlinear part ...
-	double *p;	// array for \psi
+	double *p;	// array for \psi_C
 	double *q;	// another array
 	
 	fftw_plan p_P;	// FFTW plan for F(p)
@@ -603,14 +603,15 @@ relaxation->dx = (relaxation->d * (fs[1] - fs[2]) + 2.0 * dxs[0] * (-2.0 * fs[0]
 }
 
 // relaxes the system for T time steps
+// relaxes the system for T time steps
 void relax(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxation, struct Output *output) {
 	for(relaxation->t = 0; relaxation->t <= relaxation->T; relaxation->t++) {
-		if(relaxation->T_optimize > 0 && relaxation->t > 0 && relaxation->t%relaxation->T_optimize == 0) optimize(arrays, model, relaxation);	// optimize?
-		if(relaxation->t%output->T_print == 0) {	// print output?
+		if(relaxation->T_optimize > 0 && relaxation->t > 0 && relaxation->t % relaxation->T_optimize == 0) optimize(arrays, model, relaxation);	// optimize?
+		if(relaxation->t % output->T_print == 0) {	// print output?
 			fp(arrays, model, relaxation);
 			print(relaxation, output);
 		}
-		if(relaxation->t%output->T_write == 0) write_state(arrays, relaxation, output);		// write out state?
+		if(relaxation->t % output->T_write == 0) write_state(arrays, relaxation, output);		// save state?
 		if(relaxation->t < relaxation->T) step(arrays, model, relaxation);	// perform iteration step
 	}
 }
@@ -644,7 +645,7 @@ int main(int argc, char **argv) {
 	FILE *input = fopen(filename, "r");
 	if(input == NULL) {
 		printf("Input file not found!\n");
-		return 2;
+		return 1;
 	}
 	// create empty output file
 	sprintf(filename, "%s.out", output.name);
@@ -655,7 +656,6 @@ int main(int argc, char **argv) {
 	char line[1024];
 	while(fscanf(input, " %c", &label) != EOF) {
 		if(label == '#' && fgets(line, 1024, input)) {}			// comment
-		else if(label == '\n') {}								// empty line
 		else if(label == 'S') {									// seed random number generators
 			seed_rngs(&relaxation, input);
 		}
