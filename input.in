@@ -4,16 +4,16 @@
 S	24354545
 
 # output
-#	T_print	T_write	(intervals for printing output and writing out state)
-O	100	  1000
+# T_print  T_write (intervals for printing output and writing out state)
+O 100 1000
 
 # arrays
 #	W 	  H	Z (width, height and Z)
-A	512	512 512
+A	512	512   512
 
 # polycrystalline initialization
-#	init	dx	dy	dz    l0	  no	  A	   R
-I	1	1.0	1.0	1.0   1.0	0.25	-0.1	10.0
+#	init	dx	dy	dz     l0	  no	  A	   R
+I	1	1.0	1.0	1.0    1.0	0.25	-0.1	10.0
 #	... x- and y-discretization, lattice constant [in dimensionless units, ~4pi/sqrt(3)],
 #	average density, amplitude of density oscillations,
 #	radius (in lattice constants) of grains
