@@ -102,12 +102,16 @@ void configure_arrays(struct Arrays *arrays, FILE *input) {
 
     ptrdiff_t lWHp = 2 * lWHh;  // padded real array size
 
-    // Allocate memory
-    arrays->A = (double *)fftw_malloc(lWHh * sizeof(double));
-    arrays->B = (double *)fftw_malloc(lWHh * sizeof(double));
+    // Allocate memory 
 
-    arrays->p = (double *)fftw_malloc(lWHp * sizeof(double));
-    arrays->q = (double *)fftw_malloc(lWHp * sizeof(double));
+arrays->A = (double *)fftw_malloc(lWHh * sizeof(double));
+if (!arrays->A) { fprintf(stderr, "fftw_malloc failed for A\n"); MPI_Abort(MPI_COMM_WORLD, 1); }
+arrays->B = (double *)fftw_malloc(lWHh * sizeof(double));
+if (!arrays->B) { fprintf(stderr, "fftw_malloc failed for B\n"); MPI_Abort(MPI_COMM_WORLD, 1); }
+arrays->p = (double *)fftw_malloc(lWHp * sizeof(double));
+if (!arrays->p) { fprintf(stderr, "fftw_malloc failed for p\n"); MPI_Abort(MPI_COMM_WORLD, 1); }
+arrays->q = (double *)fftw_malloc(lWHp * sizeof(double));
+if (!arrays->q) { fprintf(stderr, "fftw_malloc failed for q\n"); MPI_Abort(MPI_COMM_WORLD, 1); }
 
     // Set up FFTW plans: dimensions passed as (Z, H, W)
     arrays->p_P = fftw_mpi_plan_dft_r2c_3d(
@@ -148,8 +152,6 @@ void configure_relaxation(struct Relaxation *relaxation, FILE *input) {
 	fscanf(input, " %d %lf %lf %lf %lf %d", &relaxation->T, &relaxation->dx, &relaxation->dy, &relaxation->dz, &relaxation->dt, &relaxation->T_optimize);	// read from input file
 }
 
-
-
 // returns the one mode approximation for 3D
 double OMA(double x, double y, double z, double A, double x0, double y0, double z0) {
     double n = 0.0; // Density field at point (x, y, z)
@@ -176,7 +178,7 @@ double OMA(double x, double y, double z, double A, double x0, double y0, double 
 
 // initializes the density field with a crystallite in center
 // R is radius
-void embedded_crystallite(struct Arrays *arrays, double dx, double dy, double dz, double l0, double no, double A, double R) {
+void embedded_crystallite(struct Arrays *arrays, double dx, double dy, double dz, double no, double A, double R) {
 int Wp=2*(arrays->W/2+1);
 int w, h, z, gw, gh, gz, k, x0, y0, z0;
 double R2 = R*R;
@@ -210,12 +212,12 @@ if(fscanf (input, " %d", &init)!=1){
     exit(1);
 }
 if(init==1){
-double dx, dy, dz, l0, no, A, R;
-if(fscanf(input, " %lf %lf %lf %lf %lf %lf %lf", &dx, &dy, &dz, &l0, &no, &A, &R)!= 7){
+double dx, dy, dz, no, A, R;
+if(fscanf(input, " %lf %lf %lf %lf %lf %lf", &dx, &dy, &dz,  &no, &A, &R)!= 6){
     printf("Invalid initialization type!\n");
     exit(1);
 }
-embedded_crystallite(arrays, dx, dy, dz, l0, no, A, R);
+embedded_crystallite(arrays, dx, dy, dz, no, A, R);
 }
 }
 
@@ -236,7 +238,7 @@ void write_state(struct Arrays *arrays, struct Relaxation *relaxation, struct Ou
 
             for (z = 0; z < arrays->lZ; z++) {
                 for (h = 0; h < arrays->lH; h++) {
-                    k = Wp * arrays->lW * z + Wp * h; // start index for (z,h) slice
+                    k = z * arrays->lH * Wp + h * Wp; // start index for (z,h) slice
                     for (w = 0; w < arrays->W; w++, k++) {
                         fprintf(file, "%e\n", arrays->q[k]);
                     }
@@ -375,8 +377,7 @@ void fp(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxatio
 
 				int izx = (z * lH + h) * (arrays->W / 2 + 1) + w;
 
-				Q[2*izx+0] *= d2;
-				Q[2*izx+1] *= d2;
+				Q[izx] *= d2;
 			}
 		}
 	}
@@ -436,42 +437,10 @@ void fp(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxatio
 	scale_P(arrays);            // scale back
 }
 
-
-//void init_operators(struct Arrays *arrays, struct Relaxation *relaxation, struct Model *model, double dt) {
-//	int Wp = 2 * (arrays-> W / 2 + 1);
-//	int size = arrays->Z * arrays-> H * (arrays->W / 2 + 1);
-//
-//	double C1 = fabs(model->Me* model->Bl);
-//	double C2 = fabs(2*model->Me* model->Bs);
-//	double C3 = fabs(model->Me*model->Bs);
-
-//	for (int z = 0; z < arrays->Z; z++) {
-//		double kz = (z <= arrays-> Z / 2) ? z : z - arrays-> Z;
-//		for (int y = 0; y < arrays->H; y++) {
-//			double ky = (y <= arrays->H / 2) ? y : y - arrays-> H;
-//			for (int x = 0; x <= arrays->W / 2; x++) {
-//				double kx = x;
-//				double k2 = kx*kx + ky*ky + kz*kz;
-//				double k4 = k2 * k2;
-//				double k6 = k4 * k2;
-
-//				int izx = (z * arrays->H + y) * (arrays->W / 2 + 1) + x;
-//				double Lk = -C1 * k2 + C2 * k4 - C3 * k6;
-
-//				arrays->A[izx] = 1.0 / (1.0 - dt * Lk);
-//				arrays->B[izx] = dt * arrays->A[izx];
-//			}
-//		}
-//	}
-// }
-
 // performs one iteration of the semi-implicit spectral method in 3D with operator splitting
 void step(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxation) {
-	int W = arrays->W;
-	int H = arrays->H;
-	int Z = arrays->Z;
-	int Wp = 2 * (W / 2 + 1);
-	int slice_size = H * Wp;
+	int Wp = 2 * (arrays-> W / 2 + 1);
+	int slice_size = arrays-> H * Wp;
 
 	double C1 = fabs(model->Me*model->Bl);
 	double C2 = fabs(2*model->Me*model->Bs);
@@ -490,59 +459,40 @@ void step(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxat
 
 	// Spectral update: P = A*P + B*Q, then copy to Q
 	// === A1: Build nonlinear term in real space ===
-	for (int z = 0; z < Z; z++) {
-		for (int y = 0; y < H; y++) {
-			int izx = z * slice_size + y * Wp;
-			for (int x = 0; x < W; x++) {
-				q = arrays->q[izx + x];
-				q2 = q * q;
-				q4 = q2 * q2;
-				arrays->q[izx + x] =(model->Me*model->Bl-C1)*q+
-					model->Me*(-0.5*model->v*q2+(1.0/3.0)*q*q2)+
-                                  q*(model->Me*model->Bs*2-C2*0.5)+q*(model->Me*model->Bs-C3*0.5);
-			}
-		}
-	}
-
+for (int z = 0; z < arrays->lZ; z++) {
+    for (int y = 0; y < arrays->lH; y++) {
+        int izx = z * arrays->lH * Wp + y * Wp;
+        for (int x = 0; x < arrays-> W; x++) {
+            q = arrays->q[izx + x];
+            q2 = q * q;
+            q4 = q2 * q2;
+            arrays->q[izx + x] = (model->Me * model->Bl - C1) * q +
+                model->Me * (-0.5 * model->v * q2 + (1.0 / 3.0) * q * q2) +
+                q * (model->Me * model->Bs * 2 - C2 * 0.5) +
+                q * (model->Me * model->Bs - C3 * 0.5);
+        }
+    }
+}
 	fftw_execute(arrays->q_Q);  // real -> Q
 
-	// === Spectral update: P = A*P + B*Q ===
-//	for (z = 0; z < Z; z++) {
-//		for (y = 0; y < H; y++) {
-//			for (x = 0; x <= W / 2; x++) {
-//				izx = (z * H + y) * (W / 2 + 1) + x;
-//				P[izx][0] = arrays->A[izx] * P[izx][0] + arrays->B[izx] * Q[izx][0];
-//				P[izx][1] = arrays->A[izx] * P[izx][1] + arrays->B[izx] * Q[izx][1];
-//				Q[izx][0] = P[izx][0];  // Copy to Q for IFFT
-//				Q[izx][1] = P[izx][1];
-//			}
-//		}
-//	}
+for (int z = 0; z < arrays->lZ; z++) {
+    int gz = arrays->lz0 + z;
+    double kz = (gz <= arrays->Z / 2) ? gz : gz - arrays->Z;
+    for (int y = 0; y < arrays->lH; y++) {
+        int gh = arrays->lh0 + y;
+        double ky = (gh <= arrays->H / 2) ? gh : gh - arrays->H;
+        for (int x = 0; x <= arrays->W / 2; x++) {
+            double kx = x;
+            double k2 = kx * kx + ky * ky + kz * kz;
+            double k4 = k2 * k2;
+            double k6 = k4 * k2;
 
-	for (int z = 0; z < arrays->Z; z++) {
-		double kz = (z <= arrays-> Z / 2) ? z : z - arrays-> Z;
-		for (int y = 0; y < arrays->H; y++) {
-			double ky = (y <= arrays->H / 2) ? y : y - arrays-> H;
-			for (int x = 0; x <= arrays->W / 2; x++) {
-				double kx = x;
-				double k2 = kx*kx + ky*ky + kz*kz;
-				double k4 = k2 * k2;
-				double k6 = k4 * k2;
-
-				int izx = (z * arrays->H + y) * (arrays->W / 2 + 1) + x;
-				P[izx] = C1*k2*Q[izx]+C2*k4*Q[izx]+C3*k6*Q[izx];
-
-				//copy P to Q
-				Q[izx] = P[izx];
-
-
-//				arrays->A[izx] = 1.0 / (1.0 - relaxation->dt * Lk);
-//				arrays->B[izx] = relaxation->dt * arrays->A[izx];
-			}
-		}
-	}
-
-
+            int izx = (z * arrays->lH + y) * (arrays->W / 2 + 1) + x;
+            P[izx] = C1 * k2 * Q[izx] + C2 * k4 * Q[izx] + C3 * k6 * Q[izx];
+            Q[izx] = P[izx];
+        }
+    }
+}
 	fftw_execute(arrays->Q_q);  // Q -> real q
 }
 
@@ -570,7 +520,7 @@ relaxation->dx = (relaxation->d * (fs[1] - fs[2]) + 2.0 * dxs[0] * (-2.0 * fs[0]
     relaxation->dz = (relaxation->d * (fs[5] - fs[6]) + 2.0 * dzs[0] * (-2.0 * fs[0] + fs[5] + fs[6])) /(2.0 * (fs[5] - 2.0 * fs[0] + fs[6]));
 
 	// check that change in discretization is acceptable
-	double l0 = 4.0*pi/sqrt(3.0);	// approximate dimensionless length scale (lattice constant)
+	double l0 = 2.0*pi*sqrt(2.0);	// approximate dimensionless length scale (lattice constant)
 	double dw = arrays->W*(relaxation->dx-dxs[0]);		// change in horizontal system size
 	double dh = arrays->H*(relaxation->dy-dys[0]);		// ... vertical ...
 	double dz = arrays->Z*(relaxation->dz-dzs[0]);		// ... vertical ...
@@ -620,67 +570,70 @@ void clear_arrays(struct Arrays *arrays) {
 }
 
 int main(int argc, char **argv) {
-	// init MPI
-	MPI_Init(&argc, &argv);
-	fftw_mpi_init();
-	// create structs
-	struct Arrays arrays;
-	struct Model model;
-	struct Relaxation relaxation;
-	struct Output output;
-	relaxation.t0 = time(NULL);
-	relaxation.t = 0;
-	relaxation.d = 0.0001;
-	MPI_Comm_rank(MPI_COMM_WORLD, &relaxation.id);
-	MPI_Comm_size(MPI_COMM_WORLD, &relaxation.ID);
-	strcpy(output.name, argv[1]);
-	// input stream
-	char filename[128];
-	sprintf(filename, "%s.in", output.name);
-	FILE *input = fopen(filename, "r");
-	if(input == NULL) {
-		printf("Input file not found!\n");
-		return 1;
-	}
-	// create empty output file
-	sprintf(filename, "%s.out", output.name);
-	FILE *out = fopen(filename, "w");
-	fclose(out);
-	// read input
-	char label;
-	char line[1024];
-	while(fscanf(input, " %c", &label) != EOF) {
-		if(label == '#' && fgets(line, 1024, input)) {}			// comment
-		else if(label == 'S') {									// seed random number generators
-			seed_rngs(&relaxation, input);
-		}
-		else if(label == 'O') {									// output
-			configure_output(&output, input);
-		}
-		else if(label == 'A') {			// set up arrays and FFTW plans
-			configure_arrays(&arrays, input);
-		}
-        	else if(label == 'I') {                 // initialization
-			initialize_system(&arrays, input);
-		}
-		else if(label == 'M') {									// model
-			configure_model(&model, input);
-		}
-		else if(label == 'R') {									// relaxation
-			configure_relaxation(&relaxation, input);
-			update_AB(&arrays, &model, &relaxation);
-			relax(&arrays, &model, &relaxation, &output);
-		}
-		else {
-			printf("Invalid label: %c!\n", label);				// bad input
-			return 1;
-		}
-	}
-	fclose(input);
-	
-	clear_arrays(&arrays);										// clean-up
-	MPI_Finalize();
+    // init MPI
+    MPI_Init(&argc, &argv);
+    fftw_mpi_init();
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <run_name>\n", argv[0]);
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    struct Arrays arrays;
+    struct Model model;
+    struct Relaxation relaxation;
+    struct Output output;
+    relaxation.t0 = time(NULL);
+    relaxation.t = 0;
+    relaxation.d = 0.0001;
+    MPI_Comm_rank(MPI_COMM_WORLD, &relaxation.id);
+    MPI_Comm_size(MPI_COMM_WORLD, &relaxation.ID);
+    strcpy(output.name, argv[1]);
 
-	return 0;
+    char filename[128];
+    snprintf(filename, sizeof(filename), "%s.in", output.name);
+    FILE *input = fopen(filename, "r");
+    if (input == NULL) {
+        fprintf(stderr, "Input file %s not found!\n", filename);
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
 
+    snprintf(filename, sizeof(filename), "%s.out", output.name);
+    FILE *out = fopen(filename, "w");
+    if (out) fclose(out);
+
+    char label;
+    char line[1024];
+    while (fscanf(input, " %c", &label) != EOF) {
+        if (label == '#' && fgets(line, 1024, input)) {
+        } else if (label == 'S') {
+            seed_rngs(&relaxation, input);
+        } else if (label == 'O') {
+            configure_output(&output, input);
+        } else if (label == 'A') {
+            configure_arrays(&arrays, input);
+            // Fix 6: Check FFTW plan success
+            if (!arrays.p_P || !arrays.q_Q || !arrays.Q_q) {
+                fprintf(stderr, "FFTW plan creation failed\n");
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+        } else if (label == 'I') {
+            initialize_system(&arrays, input);
+        } else if (label == 'M') {
+            configure_model(&model, input);
+        } else if (label == 'R') {
+            if (fscanf(input, " %d %lf %lf %lf %lf %d", &relaxation.T, &relaxation.dx, &relaxation.dy, &relaxation.dz, &relaxation.dt, &relaxation.T_optimize) != 6) {
+                fprintf(stderr, "Invalid relaxation parameters!\n");
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+            update_AB(&arrays, &model, &relaxation);
+            relax(&arrays, &model, &relaxation, &output);
+        } else {
+            fprintf(stderr, "Invalid label in input: %c\n", label);
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+    }
+    fclose(input);
+
+    clear_arrays(&arrays);
+    MPI_Finalize();
+    return 0;
 }
