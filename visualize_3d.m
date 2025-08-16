@@ -1,16 +1,13 @@
 % To run the code: visualize_3d('runname')
 
 function visualize_3d(runname)
-    % VISUALIZE_3D  Read .dat files from PFC code and make 3D isosurface 
-plots
+    % VISUALIZE_3D  Read .dat files from PFC code and make 3D isosurface  plots
     %
     % Usage:
     %   visualize_3d('runname')
     %
-    % This will read 'runname.in' for grid size and all 'runname-t:*.dat' 
-files,
-    % then generate .jpg files with 3D isosurfaces of the smoothed field 
-u_n.
+    % This will read 'runname.in' for grid size and all 'runname-t:*.dat'  files,
+    % then generate .jpg files with 3D isosurfaces of the smoothed field  u_n.
 
     %% --- Step 1: Read dimensions from input file (.in) ---
     infile = [runname, '.in'];
@@ -58,8 +55,7 @@ u_n.
         q = reshape(data(:,1), [W, H, Z]);
         u_n = reshape(data(:,2), [W, H, Z]);
 
-        % MATLAB arrays are (row,col,page) = (y,x,z), so permute for 
-consistency
+        % MATLAB arrays are (row,col,page) = (y,x,z), so permute for consistency
         u_n = permute(u_n, [2 1 3]);
 
         % --- Step 4: Make isosurface plot ---
