@@ -14,11 +14,11 @@ A 300 300 300
 #
 # Initialization: crystallite in center
 # init dx dy dz no   R   Bl       Bs
-I 1    1.0 1.0 1.0  -0.04  10.0  0.866075  0.866025
+I 1    1.0 1.0 1.0  -0.04  5.0  0.288675    0.288725
 #
 # Model parameters (BCC case from Tegze PRL)
 # Bl          Bs         v          Me   no       sigma_u
-M 0.866075    0.866025   0.866025   1.0  -0.04   0.2
+M 0.288675    0.288725   0.658037   1.0  -0.04   0.2
 #
 # Relaxation parameters
 # T      dx   dy   dz   dt   T_optimize
