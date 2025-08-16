@@ -224,6 +224,7 @@ double OMA(double x, double y, double z, double x0, double y0, double z0, struct
         double qx = q0 * qx_int[i];
         double qy = q0 * qy_int[i];
         double qz = q0 * qz_int[i];
+
         aa += 4 * A * (cos(qx) * cos(qy) + cos(qy) * cos(qz) + cos(qx) * cos(qz));
     }
     return aa; 
@@ -353,12 +354,12 @@ void update_AB(struct Arrays *arrays, struct Model *model, struct Relaxation *re
 
             for (w = 0; w <= arrays->W / 2; w++) {
                 kx = w * dkx;
-                k2 = -4*pi*pi*(kx * kx + ky * ky + kz * kz);
+                k2 = kx * kx + ky * ky + kz * kz;
                 k4 = k2 * k2;
                 k6 = k4 * k2;
 
                 // Dispersion relation term
-                L = C1 * k2 + C2 * k4 + C3 * k6;
+                L = -C1 * k2 + C2 * k4 - C3 * k6;
 
                 // Denominator for implicit part
                 denom = 1.0 - dt * L;
@@ -435,7 +436,7 @@ void fp(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxatio
                                 double kx2 = kx * kx;
 
                                 double k2 = -4.0 * pi * pi * (kx2 + ky2 + kz2);
-                               // double d2 = (k2 - 1.0) * (k2 - 1.0); 
+                               // double d2 = (k2 - 1.0) * (k2 - 1.0); (change ?)
                                 double d2 = (k2 - 2.0) * (k2 - 2.0);
 
                                 int izx = (z * lH + h) * (arrays->W / 2 + 1) + w;
@@ -476,7 +477,8 @@ void fp(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxatio
                                 double p4 = p2*p2;
 
                                 // Free energy density: match your model's form
-                                relaxation->f += 0.5 * (model->Bl + model->Bs * (2 * k2 + k4)) * p2 - (model->v / 6.0) * p2 * p + 0.25 * p4;
+                                relaxation->f += 0.5 * (model->Bl + model->Bs * (2 * k2 + k4)) * p2 - 
+                                                 (model->v / 6.0) * p2 * p + 0.25 * p4;
 
                                 // Restore original q
                                 arrays->q[izx] = p;
@@ -615,7 +617,7 @@ void optimize(struct Arrays *arrays, struct Model *model, struct Relaxation *rel
     double dzs[3] = {dz0 - dd, dz0, dz0 + dd};
 
     double fs[7];  // Free energy densities
-    int i;
+int i;
     // Sample around original size (central +/- delta in each direction)
     for (i = 0; i < 7; i++) {
         // Reset to original
