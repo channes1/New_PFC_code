@@ -353,12 +353,12 @@ void update_AB(struct Arrays *arrays, struct Model *model, struct Relaxation *re
 
             for (w = 0; w <= arrays->W / 2; w++) {
                 kx = w * dkx;
-                k2 = kx * kx + ky * ky + kz * kz;
+                k2 = -4*pi*pi*(kx * kx + ky * ky + kz * kz);
                 k4 = k2 * k2;
                 k6 = k4 * k2;
 
                 // Dispersion relation term
-                L = -C1 * k2 + C2 * k4 - C3 * k6;
+                L = C1 * k2 + C2 * k4 + C3 * k6;
 
                 // Denominator for implicit part
                 denom = 1.0 - dt * L;
