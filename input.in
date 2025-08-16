@@ -1,28 +1,25 @@
 # PFC input file
 #
-# seed for random number generator
-S 24354545
+# Seed random number generators
+# 0: random seed, else: user-defined 
+S 123456
 #
-# output
-# T_print  T_write (intervals for printing output and writing out state)
-O 100 1000
+# Output intervals
+# T_print, T_write
+O 100   1000
 #
-# arrays
-#	W 	  H	Z (width, height and Z)
-A	128	128  128
+# Array dimensions (must be power-of-two friendly for FFTW)
+# W  H  Z
+A 300 300 300
 #
-# polycrystalline initialization
-#	init	dx	dy	dz     	  no	  A	   R
-I	1	1.0	1.0	1.0    	0.25	-0.1	10.0
-#	... x- and y-discretization, lattice constant [in dimensionless units, ~4pi/sqrt(3)],
-#	average density, amplitude of density oscillations,
-#	radius (in lattice constants) of grains
+# Initialization: crystallite in center
+# init dx dy dz no   R   Bl       Bs
+I 1    1.0 1.0 1.0  -0.04  10.0  0.866075  0.866025
 #
-# model parameters
-#	Bl	Bs	v	Me
-M	0.005	0.005	0.1	1
+# Model parameters (BCC case from Tegze PRL)
+# Bl          Bs         v          Me   no       sigma_u
+M 0.866075    0.866025   0.866025   1.0  -0.04   0.2
 #
-# relaxation
-#	T	dx	dy	dz	dt	T_optimize
-R	10000	1.0	1.0	1.0	1.0	100
-#	number of iterations, ..., time step, interval for calculation box optimizations
+# Relaxation parameters
+# T      dx   dy   dz   dt   T_optimize
+R 10000  1.0  1.0  1.0  1.0  100
