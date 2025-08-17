@@ -354,7 +354,7 @@ void update_AB(struct Arrays *arrays, struct Model *model, struct Relaxation *re
 
             for (w = 0; w <= arrays->W / 2; w++) {
                 kx = w * dkx;
-                k2 = kx * kx + ky * ky + kz * kz;
+                k2 = -4.0*pi*pi*(kx * kx + ky * ky + kz * kz);
                 k4 = k2 * k2;
                 k6 = k4 * k2;
 
@@ -436,7 +436,7 @@ void fp(struct Arrays *arrays, struct Model *model, struct Relaxation *relaxatio
                                 double kx2 = kx * kx;
 
                                 double k2 = -4.0 * pi * pi * (kx2 + ky2 + kz2);
-                               // double d2 = (k2 - 1.0) * (k2 - 1.0); (change ?)
+                               // double d2 = (k2 - 1.0) * (k2 - 1.0); 
                                 double d2 = (k2 - 2.0) * (k2 - 2.0);
 
                                 int izx = (z * lH + h) * (arrays->W / 2 + 1) + w;
